@@ -195,8 +195,9 @@ class ReactCrop extends PureComponent {
   window = typeof window !== "undefined" ? window : {};
 
   document = typeof document !== "undefined" ? document : {};
-
-  state = {};
+  state = {
+    crops:[]
+  };
 
   keysDown = new Set();
 
@@ -377,17 +378,19 @@ class ReactCrop extends PureComponent {
 
     const { width, height } = this.mediaDimensions;
 
+    this.setState({ cropIsActive: true, newCropIsBeingDrawn: true, crops: [...this.state.crops , nextCrop] });
     onChange(
       convertToPixelCrop(nextCrop, width, height),
       convertToPercentCrop(nextCrop, width, height)
     );
 
-    this.setState({ cropIsActive: true, newCropIsBeingDrawn: true });
+   
   };
 
   onDocMouseTouchMove = (e) => {
-    const { crop, disabled, onChange, onDragStart } = this.props;
-
+    const {  disabled, onChange, onDragStart } = this.props;
+    let crops = this.state.crops;
+    let crop = crops[this.state.crops.length-1];
     if (disabled) {
       return;
     }
@@ -405,7 +408,7 @@ class ReactCrop extends PureComponent {
 
     const { evData } = this;
     const clientPos = getClientPos(e);
-
+    
     if (evData.isResize && crop.aspect && evData.cropOffset) {
       clientPos.y = this.straightenYPath(clientPos.x);
     }
@@ -421,6 +424,7 @@ class ReactCrop extends PureComponent {
       nextCrop = this.dragCrop();
     }
 
+ 
     if (nextCrop !== crop) {
       const { width, height } = this.mediaDimensions;
       onChange(
@@ -428,6 +432,14 @@ class ReactCrop extends PureComponent {
         convertToPercentCrop(nextCrop, width, height)
       );
     }
+
+
+    crops[crops.length-1] = crop;
+    this.setState({
+      crops
+    })
+
+
   };
 
   onComponentKeyDown = (e) => {
@@ -494,7 +506,8 @@ class ReactCrop extends PureComponent {
   };
 
   onDocMouseTouchEnd = (e) => {
-    const { crop, disabled, onComplete, onDragEnd } = this.props;
+    const { disabled, onComplete, onDragEnd } = this.props;
+    const crop = this.state.crops[this.state.crops.length-1]
 
     if (disabled) {
       return;
@@ -511,7 +524,6 @@ class ReactCrop extends PureComponent {
         convertToPixelCrop(crop, width, height),
         convertToPercentCrop(crop, width, height)
       );
-
       this.setState({ cropIsActive: false, newCropIsBeingDrawn: false });
     }
   };
@@ -524,6 +536,10 @@ class ReactCrop extends PureComponent {
     const resolvedCrop = resolveCrop(crop, width, height);
     const pixelCrop = convertToPixelCrop(resolvedCrop, width, height);
     const percentCrop = convertToPercentCrop(resolvedCrop, width, height);
+    // push new crop into state
+    this.setState({
+      crops: [...this.state.crops, crop]
+    })
     return { pixelCrop, percentCrop };
   }
 
@@ -741,13 +757,13 @@ class ReactCrop extends PureComponent {
     return k * clientX + d;
   }
 
-  createCropSelection() {
+  createCropSelection(crop) {
     const {
       disabled,
       locked,
       renderSelectionAddon,
       ruleOfThirds,
-      crop
+      //crop
     } = this.props;
     const style = this.getCropStyle();
 
@@ -853,10 +869,13 @@ class ReactCrop extends PureComponent {
     } = this.props;
 
     const { cropIsActive, newCropIsBeingDrawn } = this.state;
-    const cropSelection =
-      isCropValid(crop) && this.componentRef
-        ? this.createCropSelection()
+    const cropSelection = (crop)=> {
+      debugger;
+      return isCropValid(crop) && this.componentRef
+        ? this.createCropSelection(crop)
         : null;
+    }
+
 
     const componentClasses = clsx("ReactCrop", className, {
       "ReactCrop--active": cropIsActive,
@@ -902,7 +921,7 @@ class ReactCrop extends PureComponent {
           )}
         </div>
         {children}
-        {cropSelection}
+        {this.state.crops && this.state.crops.map((crop)=>cropSelection(crop) )}
       </div>
     );
   }
